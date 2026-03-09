@@ -14,6 +14,9 @@ ADMIN_IDS = [8214136791, 1441402891]
 # URL товара в Lava.top
 PRODUCT_URL = "https://app.lava.top/products/77a5bd8f-7e4c-41e1-9a0f-42e9cc915fdf/345102f6-2fce-4311-a321-d241b10f49af?currency=RUB"
 
+# API ключ для проверки вебхуков от Lava.top
+WEBHOOK_SECRET = 'sk_live_57a8d3f9e2b1c4a6d8f9e2b1c4a6d8f9e2b1c4a6'  # Тот самый ключ из лк lava.top
+
 # Настройки сервера (Railway сам назначает порт)
 PORT = 5000
 

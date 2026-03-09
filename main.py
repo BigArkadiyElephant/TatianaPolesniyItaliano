@@ -220,6 +220,11 @@ def lava_webhook():
     """
     Эндпоинт для уведомлений от Lava.top
     """
+    received_key = request.headers.get('X-Api-Key')
+    if received_key != WEBHOOK_SECRET:
+        logger.warning("❌ Неверный API ключ вебхука")
+        return jsonify({"error": "Unauthorized"}), 401
+
     # Получаем данные
     data = request.json
     logger.info("🔥 ПОЛУЧЕН НОВЫЙ ПЛАТЕЖ!")
