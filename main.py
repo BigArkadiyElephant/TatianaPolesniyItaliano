@@ -7,7 +7,7 @@ import os
 import threading
 import time
 import requests
-from config import BOT_TOKEN, ADMIN_IDS, PRODUCT_URL, PORT, logger, validate_config
+from config import BOT_TOKEN, ADMIN_IDS, PRODUCT_URL, PORT, logger, validate_config, WEBHOOK_SECRET
 
 # ======================== ИНИЦИАЛИЗАЦИЯ ========================
 
