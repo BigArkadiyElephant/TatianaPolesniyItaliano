@@ -215,53 +215,73 @@ def index():
     })
 
 
-@app.route('/webhook/lava', methods=['POST'])
-def lava_webhook():
-    """
-    Эндпоинт для уведомлений от Lava.top
-    """
-    expected_secret = os.getenv('WEBHOOK_SECRET')
-    received_key = request.headers.get('X-Api-Key')
+@bot.message_handler(commands=['testwebhook'])
+def test_webhook_command(message):
+    """Отправить тестовый вебхук (только для админов)"""
 
-    # Если секрет задан в окружении - проверяем
-    if expected_secret:
-        if not received_key:
-            logger.warning("❌ Вебхук без ключа авторизации")
-            return jsonify({"error": "Missing API key"}), 401
-        if received_key != expected_secret:
-            logger.warning(f"❌ Неверный ключ вебхука: {received_key}")
-            return jsonify({"error": "Unauthorized"}), 401
-    else:
-        logger.warning("⚠️ WEBHOOK_SECRET не задан в окружении, проверка отключена")
+    if message.chat.id not in ADMIN_IDS:
+        bot.reply_to(message, "❌ Только для администраторов")
+        return
 
-    # Получаем данные
-    data = request.json
-    logger.info("🔥 ПОЛУЧЕН НОВЫЙ ПЛАТЕЖ!")
-    logger.info(json.dumps(data, indent=2, ensure_ascii=False))
+    if not PUBLIC_URL:
+        bot.reply_to(message, "❌ Сначала установи URL через /seturl")
+        return
 
-    # Формируем уведомление для админов
-    msg = "🔔 *НОВЫЙ ПЛАТЕЖ!*\n\n"
+    # Получаем секретный ключ из окружения
+    webhook_secret = os.getenv('WEBHOOK_SECRET')
+    if not webhook_secret:
+        bot.reply_to(message, "❌ WEBHOOK_SECRET не настроен в окружении")
+        return
 
-    if data and isinstance(data, dict):
-        # Важные поля
-        important_fields = ['amount', 'currency', 'status', 'orderId', 'email']
-        for field in important_fields:
-            if field in data:
-                msg += f"*{field}:* `{data[field]}`\n"
+    # Создаем тестовые данные
+    test_data = {
+        "id": "test_" + str(int(time.time())),
+        "amount": 100,
+        "currency": "RUB",
+        "status": "success",
+        "orderId": "order_" + str(int(time.time())),
+        "email": f"test_{message.chat.id}@example.com",
+        "product": "Тестовый товар",
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "customData": {
+            "telegram_id": message.chat.id,
+            "username": message.from_user.username
+        }
+    }
 
-        # Остальные поля
-        other_fields = {k: v for k, v in data.items() if k not in important_fields}
-        if other_fields:
-            msg += f"\n*Детали:*\n"
-            for k, v in list(other_fields.items())[:5]:  # Первые 5 полей
-                msg += f"`{k}: {v}`\n"
-    else:
-        msg += "Нет данных"
+    try:
+        webhook_url = f"{PUBLIC_URL}/webhook/lava"
 
-    # Отправляем всем админам
-    notify_admins(msg, parse_mode="Markdown")
+        bot.reply_to(message, f"🔄 Отправляю тестовый вебхук на {webhook_url}...")
 
-    return jsonify({"status": "ok"}), 200
+        # ВАЖНО: Добавляем ключ в заголовок
+        headers = {
+            "Content-Type": "application/json",
+            "X-Api-Key": webhook_secret  # Ключ для авторизации
+        }
+
+        response = requests.post(
+            webhook_url,
+            json=test_data,
+            headers=headers,
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            bot.reply_to(
+                message,
+                f"✅ Тестовый вебхук отправлен!\n\n"
+                f"*Отправленные данные:*\n```\n{json.dumps(test_data, indent=2, ensure_ascii=False)}\n```",
+                parse_mode="Markdown"
+            )
+        else:
+            bot.reply_to(
+                message,
+                f"❌ Ошибка: статус {response.status_code}\n{response.text[:200]}"
+            )
+
+    except Exception as e:
+        bot.reply_to(message, f"❌ Ошибка: {e}")
 
 
 @app.route('/webhook/test', methods=['POST'])
