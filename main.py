@@ -220,10 +220,19 @@ def lava_webhook():
     """
     Эндпоинт для уведомлений от Lava.top
     """
-    #received_key = request.headers.get('X-Api-Key')
-    #if received_key != WEBHOOK_SECRET:
-        #logger.warning("❌ Неверный API ключ вебхука")
-        #return jsonify({"error": "Unauthorized"}), 401
+    expected_secret = os.getenv('WEBHOOK_SECRET')
+    received_key = request.headers.get('X-Api-Key')
+
+    # Если секрет задан в окружении - проверяем
+    if expected_secret:
+        if not received_key:
+            logger.warning("❌ Вебхук без ключа авторизации")
+            return jsonify({"error": "Missing API key"}), 401
+        if received_key != expected_secret:
+            logger.warning(f"❌ Неверный ключ вебхука: {received_key}")
+            return jsonify({"error": "Unauthorized"}), 401
+    else:
+        logger.warning("⚠️ WEBHOOK_SECRET не задан в окружении, проверка отключена")
 
     # Получаем данные
     data = request.json
